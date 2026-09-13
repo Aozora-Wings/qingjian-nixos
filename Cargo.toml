@@ -10,7 +10,7 @@ members = [
     "crates/qingjian-lm",
     "crates/qingjian-format",
     "crates/qingjian-neural",
-    "apps/cli", "apps/macos", "apps/windows/server", "apps/windows/tsf", "apps/windows/settings", "tools/dict-convert", "tools/gloss-gen",
+    "apps/cli", "apps/macos", "apps/windows/server", "apps/windows/tsf", "apps/windows/settings", "apps/linux/server", "tools/dict-convert", "tools/gloss-gen",
 ]
 
 [workspace.package]
@@ -36,6 +36,7 @@ qingjian-neural = { path = "crates/qingjian-neural" }
 
 # 外部依赖统一在这里定版本，子 crate 一律 `xxx.workspace = true`
 serde = { version = "1.0.229", features = ["derive"] }
+libc = "0.2"
 thiserror = "2.0.20"
 tracing = "0.1.44"
 tracing-subscriber = { version = "0.3.23", features = ["env-filter"] }

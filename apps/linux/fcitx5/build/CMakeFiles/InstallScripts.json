@@ -1,0 +1,7 @@
+{
+	"InstallScripts" : 
+	[
+		"/Developer/qingjian-nixos/apps/linux/fcitx5/build/cmake_install.cmake"
+	],
+	"Parallel" : false
+}

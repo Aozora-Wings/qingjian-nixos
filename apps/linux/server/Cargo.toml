@@ -1,0 +1,31 @@
+[package]
+name = "qingjian-linux-server"
+description = "Linux 输入法的 Server 进程：持有 Engine，跑在输入法进程外，与 fcitx5 插件（../fcitx5）走 Unix socket IPC 通信"
+version = "0.1.0-alpha.1-dev"
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[[bin]]
+name = "qingjian-server"
+path = "src/main.rs"
+
+[dependencies]
+qingjian-core.workspace = true
+qingjian-dictionary.workspace = true
+qingjian-learning.workspace = true
+qingjian-lm.workspace = true
+qingjian-neural.workspace = true
+qingjian-platform.workspace = true
+qingjian-predict.workspace = true
+qingjian-translate.workspace = true
+dotenvy.workspace = true
+libc.workspace = true
+thiserror.workspace = true
+tracing.workspace = true
+tracing-subscriber.workspace = true
+tracing-appender.workspace = true
+toml_edit.workspace = true
+
+[lints]
+workspace = true

@@ -1,0 +1,9 @@
+/Developer/qingjian-nixos/apps/linux/fcitx5/build/CMakeFiles/generate-desktop-file.dir
+/Developer/qingjian-nixos/apps/linux/fcitx5/build/CMakeFiles/translation-file.dir
+/Developer/qingjian-nixos/apps/linux/fcitx5/build/CMakeFiles/qingjian.dir
+/Developer/qingjian-nixos/apps/linux/fcitx5/build/CMakeFiles/edit_cache.dir
+/Developer/qingjian-nixos/apps/linux/fcitx5/build/CMakeFiles/rebuild_cache.dir
+/Developer/qingjian-nixos/apps/linux/fcitx5/build/CMakeFiles/list_install_components.dir
+/Developer/qingjian-nixos/apps/linux/fcitx5/build/CMakeFiles/install.dir
+/Developer/qingjian-nixos/apps/linux/fcitx5/build/CMakeFiles/install/local.dir
+/Developer/qingjian-nixos/apps/linux/fcitx5/build/CMakeFiles/install/strip.dir

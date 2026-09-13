@@ -15,4 +15,10 @@ if [[ -n "$staged_rs" ]]; then
 fi
 
 cargo fmt --all --check
-cargo clippy --all-targets -- -D warnings
+# Linux 移植：macOS 专用 crate（qingjian-macos，依赖 objc2）在 Linux 上无法编译，
+# 全量 clippy 在 Linux 上排除之；macOS/Windows 上保持原样。
+if [[ "$(uname)" == "Linux" ]]; then
+  cargo clippy --workspace --all-targets --exclude qingjian-macos -- -D warnings
+else
+  cargo clippy --all-targets -- -D warnings
+fi
