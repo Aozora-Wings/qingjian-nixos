@@ -1,5 +1,5 @@
 {
-  description = "青简输入法 Linux 版开发环境（Rust server + fcitx5 插件）";
+  description = "青简输入法 Linux 版：Rust server + fcitx5 插件 + NixOS 模块";
 
   # 与 nixos-config 一致：nixpkgs 走南大镜像，避免 GitHub 直连不稳。
   inputs = {
@@ -10,7 +10,21 @@
     let
       system = "x86_64-linux";
       pkgs = import nixpkgs { inherit system; };
+      qingjianServer = pkgs.callPackage ./packages/server.nix { };
+      qingjianFcitx5 = pkgs.callPackage ./packages/fcitx5.nix { };
     in {
+      packages.${system} = {
+        inherit qingjianServer qingjianFcitx5;
+        # 桌面整装：fcitx5 插件 + 服务模块。数据包（data/generated、data/model、assets）
+        # 不进 git，由 nixos-config 以 flake=false 的二进制 input 提供，经
+        # services.qingjian.dataDir 注入 QINGJIAN_DATA_DIR。
+        default = qingjianFcitx5;
+      };
+
+      nixosModules.default = import ./modules/nixos.nix {
+        inherit qingjianFcitx5 qingjianServer;
+      };
+
       devShells.${system}.default = pkgs.mkShell {
         name = "qingjian-linux-dev";
 

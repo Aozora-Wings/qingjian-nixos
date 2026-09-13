@@ -155,8 +155,12 @@ fn main() {
     let config = load_config();
     let _log_guard = init_logging(&config);
     let language = learning_language(&config);
-    // 装机布局与可执行文件同级（`share/qingjian/` 下的 data/assets 由打包方布置），开发布局是仓库根。
-    let root = resources::bundled_root().unwrap_or_else(|| PathBuf::from("."));
+    // 数据根目录优先级：QINGJIAN_DATA_DIR（NixOS 打包注入 store 数据路径）→ 随包布局
+    // （exe 同级有 data/assets）→ 开发布局（仓库根）。整句模型与配置目录另算。
+    let root = std::env::var_os("QINGJIAN_DATA_DIR")
+        .map(PathBuf::from)
+        .or_else(resources::bundled_root)
+        .unwrap_or_else(|| PathBuf::from("."));
     let dict = std::env::var_os("QINGJIAN_DICT")
         .map(PathBuf::from)
         .unwrap_or_else(|| default_dict(&root));
