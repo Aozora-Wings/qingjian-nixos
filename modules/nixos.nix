@@ -46,6 +46,9 @@ in
       wantedBy = [ "graphical-session.target" ];
       after = [ "graphical-session.target" ];
       partOf = [ "graphical-session.target" ];
+      # nixpkgs 26.x 这两个 option 无默认值但 unit 生成时会读取，需显式赋值（对齐 systemd 原生默认）
+      startLimitIntervalSec = 10;
+      startLimitBurst = 5;
       serviceConfig = {
         Type = "simple";
         ExecStart = "${qingjianServer}/bin/qingjian-server";
