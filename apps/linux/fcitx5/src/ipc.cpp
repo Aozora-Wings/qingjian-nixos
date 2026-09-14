@@ -131,7 +131,10 @@ qj::Value IPCClient::request(const qj::Value &message) {
         if (!connect() || !writeFrame(payload)) return nullValue;
     }
     std::string reply;
-    if (!readFrame(reply, 2000)) {
+    // 300ms 上限：fcitx5 是单线程主循环，等 server 太久会把整个框架冻结
+    // （表现为输入法卡顿、设置/候选窗口读不到状态）。server 本地组句通常
+    // 10ms 内；超时按放行处理，宁可漏一两个候选也不能卡死输入法。
+    if (!readFrame(reply, 300)) {
         disconnect();
         return nullValue;
     }
