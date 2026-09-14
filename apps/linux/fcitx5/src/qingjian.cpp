@@ -9,6 +9,7 @@
 #include <fcitx/inputcontext.h>
 #include <fcitx/inputmethodentry.h>
 #include <fcitx/inputpanel.h>
+#include <fcitx/event.h>
 #include <fcitx/text.h>
 #include <fcitx/candidatelist.h>
 #include <fcitx/userinterface.h>
@@ -153,6 +154,16 @@ QingjianEngine::QingjianEngine(fcitx::Instance *instance) : instance_(instance) 
     // 预热：fcitx5 加载 addon 时就连好 server（不发消息），首键免 connect 握手。
     // server 未起时静默失败，后续按键会按需重连。
     ipc_->warmup();
+
+    // ic 销毁时清理会话：deactivate 保活后，session 的清理从"失焦"挪到"窗口关闭"，
+    // 否则指针复用会把旧 session 误发给新窗口。
+    icDestroyedHandler_ = instance_->watchEvent(
+        fcitx::EventType::InputContextDestroyed,
+        fcitx::EventWatcherPhase::PreInputMethod,
+        [this](fcitx::Event &event) {
+            auto &icEvent = static_cast<fcitx::InputContextEvent &>(event);
+            closeSession(icEvent.inputContext());
+        });
 }
 
 QingjianEngine::~QingjianEngine() = default;
@@ -190,6 +201,22 @@ void QingjianEngine::closeSession(fcitx::InputContext *ic) {
     uint64_t session = found->second;
     sessions_.erase(found);
 
+    // ic 销毁（窗口关闭）：先 Commit 拿回缓冲（此时无焦点，上屏多是无害的），
+    // 再 CloseSession 释放 server 端会话。
+    commitSession(ic);
+
+    qj::Value close = qj::Value::makeObject();
+    qj::Value closeBody = qj::Value::makeObject();
+    closeBody.set("session", qj::Value::makeNumber(session));
+    close.set("CloseSession", std::move(closeBody));
+    ipc_->request(close);
+}
+
+void QingjianEngine::commitSession(fcitx::InputContext *ic) {
+    auto found = sessions_.find(ic);
+    if (found == sessions_.end()) return;
+    uint64_t session = found->second;
+
     // 失焦上屏：先 Commit 拿回缓冲，再关会话。
     qj::Value commit = qj::Value::makeObject();
     qj::Value body = qj::Value::makeObject();
@@ -200,26 +227,21 @@ void QingjianEngine::closeSession(fcitx::InputContext *ic) {
     if (text && text->isString() && !text->str.empty()) {
         ic->commitString(text->str);
     }
-
-    qj::Value close = qj::Value::makeObject();
-    qj::Value closeBody = qj::Value::makeObject();
-    closeBody.set("session", qj::Value::makeNumber(session));
-    close.set("CloseSession", std::move(closeBody));
-    ipc_->request(close);
 }
 
 void QingjianEngine::activate(const fcitx::InputMethodEntry & /*entry*/,
                               fcitx::InputContextEvent &event) {
-    fcitx::InputContext *ic = event.inputContext();
-    if (!ic) return;
-    openSession(ic);
+    // 不做 IPC：session 在首键 keyEvent 里懒建（openSession）。
+    // 窗口切换时 fcitx5 调 activate/deactivate，这里任何同步请求都会拖主线程。
 }
 
 void QingjianEngine::deactivate(const fcitx::InputMethodEntry & /*entry*/,
                                 fcitx::InputContextEvent &event) {
     fcitx::InputContext *ic = event.inputContext();
     if (!ic) return;
-    closeSession(ic);
+    // 只 Commit 上屏（1 次 IPC），保活 session：同一窗口切回时零 IPC。
+    // session 的 CloseSession 延到 ic 销毁（窗口关闭）时做。
+    commitSession(ic);
     clearPanel(ic);
 }
 

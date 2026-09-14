@@ -39,6 +39,9 @@ private:
     uint64_t openSession(fcitx::InputContext *ic);
     void closeSession(fcitx::InputContext *ic);
 
+    // 失焦上屏：发 Commit 拿回缓冲并提交；不关会话（保活复用）。
+    void commitSession(fcitx::InputContext *ic);
+
     // 处理一次 Key 的回复：上屏 / 更新 preedit 与候选；返回 true 表示按键被吃掉。
     bool handleKeyResult(fcitx::InputContext *ic, const qj::Value &reply);
     void applyFrame(fcitx::InputContext *ic, const qj::Value &frame);
@@ -46,6 +49,8 @@ private:
     void clearPanel(fcitx::InputContext *ic);
 
     fcitx::Instance *instance_;
+    // InputContext 销毁时清会话（防 session 泄漏与指针复用误用）。
+    std::unique_ptr<fcitx::HandlerTableEntry<fcitx::EventHandler>> icDestroyedHandler_;
     std::unique_ptr<IPCClient> ipc_;
     uint64_t nextSession_ = 1;
     std::unordered_map<fcitx::InputContext *, uint64_t> sessions_;
