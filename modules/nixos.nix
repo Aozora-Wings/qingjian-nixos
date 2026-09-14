@@ -39,21 +39,20 @@ in
     i18n.inputMethod.fcitx5.addons = [ cfg.package ];
 
     # 用户级服务：与 fcitx5 同会话（graphical-session），重启即拉起。
+    # 注意：NixOS systemd 服务的 option 是顶层小写属性 + serviceConfig/unitConfig，
+    # 没有 Unit/Service/Install 子段（那会报 option 不存在）。
     systemd.user.services.qingjian-server = {
-      Unit = {
-        Description = "qingjian 输入法 Rust server";
-        After = [ "graphical-session.target" ];
-        PartOf = [ "graphical-session.target" ];
-      };
-      Service = {
+      description = "qingjian 输入法 Rust server";
+      wantedBy = [ "graphical-session.target" ];
+      after = [ "graphical-session.target" ];
+      partOf = [ "graphical-session.target" ];
+      serviceConfig = {
         Type = "simple";
         ExecStart = "${qingjianServer}/bin/qingjian-server";
         Restart = "on-failure";
         RestartSec = "2";
-        Environment = [ "QINGJIAN_DATA_DIR=${cfg.dataDir}" ];
+        Environment = "QINGJIAN_DATA_DIR=${cfg.dataDir}";
       };
-      # 注意：NixOS systemd.user.services.<name> 的 WantedBy 在顶层（没有 Install 属性）
-      WantedBy = [ "graphical-session.target" ];
     };
   };
 }
