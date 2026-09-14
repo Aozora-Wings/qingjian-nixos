@@ -22,6 +22,9 @@ public:
     ~QingjianEngine() override;
 
     // 名称由 qingjian.conf 的 [Addon] Name 提供，无需在引擎上实现 name()。
+    // 输入法条目必须在这里提供：fcitx5 靠 listInputMethods() 收集 addon 的输入法，
+    // 不实现（默认返回空）就会出现 “Found 0 input method(s) in addon”。
+    std::vector<fcitx::InputMethodEntry> listInputMethods() override;
     void keyEvent(const fcitx::InputMethodEntry &entry,
                   fcitx::KeyEvent &keyEvent) override;
     void activate(const fcitx::InputMethodEntry &entry,

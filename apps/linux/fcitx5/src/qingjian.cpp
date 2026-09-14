@@ -7,6 +7,7 @@
 #include <vector>
 
 #include <fcitx/inputcontext.h>
+#include <fcitx/inputmethodentry.h>
 #include <fcitx/inputpanel.h>
 #include <fcitx/text.h>
 #include <fcitx/candidatelist.h>
@@ -152,6 +153,17 @@ QingjianEngine::QingjianEngine(fcitx::Instance *instance) : instance_(instance) 
 }
 
 QingjianEngine::~QingjianEngine() = default;
+
+std::vector<fcitx::InputMethodEntry> QingjianEngine::listInputMethods() {
+    // InputMethodEntry(uniqueName, name, languageCode, addon)：
+    // addon 参数必须等于 qingjian.conf 的 [Addon] Name，fcitx5 用它在激活时
+    // 找到本引擎实例。InputMethodEntry 是 move-only，不能拷贝进 initializer_list。
+    fcitx::InputMethodEntry entry("qingjian", "青简", "zh_CN", "qingjian");
+    entry.setLabel("青");
+    std::vector<fcitx::InputMethodEntry> list;
+    list.push_back(std::move(entry));
+    return list;
+}
 
 uint64_t QingjianEngine::openSession(fcitx::InputContext *ic) {
     auto found = sessions_.find(ic);
