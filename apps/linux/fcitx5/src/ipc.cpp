@@ -40,6 +40,11 @@ std::string defaultSocketPath() {
 
 IPCClient::~IPCClient() { disconnect(); }
 
+bool IPCClient::warmup() {
+    if (fd_ >= 0) return true;
+    return connect();
+}
+
 void IPCClient::disconnect() {
     if (fd_ >= 0) {
         ::close(fd_);

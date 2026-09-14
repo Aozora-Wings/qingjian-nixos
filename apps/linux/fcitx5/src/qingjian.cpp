@@ -150,6 +150,9 @@ qj::Value keyEventJson(uint64_t session, const fcitx::KeyEvent &keyEvent) {
 
 QingjianEngine::QingjianEngine(fcitx::Instance *instance) : instance_(instance) {
     ipc_ = std::make_unique<IPCClient>();
+    // 预热：fcitx5 加载 addon 时就连好 server（不发消息），首键免 connect 握手。
+    // server 未起时静默失败，后续按键会按需重连。
+    ipc_->warmup();
 }
 
 QingjianEngine::~QingjianEngine() = default;

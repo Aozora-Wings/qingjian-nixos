@@ -16,6 +16,10 @@ public:
     // 失败返回 null JSON（调用方按连接错误处理）。
     qj::Value request(const qj::Value &message);
 
+    // 预热：只建立连接（不发消息），失败静默返回。用于 fcitx5 加载 addon 时
+    // 就把连接准备好，首键免握手；server 未起时无害，后续按键会再连。
+    bool warmup();
+
 private:
     bool connect();
     void disconnect();
