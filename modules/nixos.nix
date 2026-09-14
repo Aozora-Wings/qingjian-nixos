@@ -52,7 +52,8 @@ in
         RestartSec = "2";
         Environment = [ "QINGJIAN_DATA_DIR=${cfg.dataDir}" ];
       };
-      Install.WantedBy = [ "graphical-session.target" ];
+      # 注意：NixOS systemd.user.services.<name> 的 WantedBy 在顶层（没有 Install 属性）
+      WantedBy = [ "graphical-session.target" ];
     };
   };
 }
