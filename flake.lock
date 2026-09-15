@@ -17,9 +17,36 @@
         "url": "https://mirrors.nju.edu.cn/git/nixpkgs.git"
       }
     },
+    "qingjian-data": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1789450704,
+        "narHash": "sha256-E/9DcZlFF1jUw3CgmGdqkpknyR9+11Iv1Ak2701B52c=",
+        "type": "tarball",
+        "url": "https://ghfast.top/https://github.com/qingjian-team/qingjian/releases/download/data/qingjian-data.tar.gz"
+      },
+      "original": {
+        "type": "tarball",
+        "url": "https://ghfast.top/https://github.com/qingjian-team/qingjian/releases/download/data/qingjian-data.tar.gz"
+      }
+    },
+    "qingjian-model": {
+      "flake": false,
+      "locked": {
+        "narHash": "sha256-41lc7nW8qKO0d51/672XPT4L6qL/CCbbX+qK3JlRCQY=",
+        "type": "file",
+        "url": "https://ghfast.top/https://github.com/qingjian-team/qingjian/releases/download/data/model.qjm"
+      },
+      "original": {
+        "type": "file",
+        "url": "https://ghfast.top/https://github.com/qingjian-team/qingjian/releases/download/data/model.qjm"
+      }
+    },
     "root": {
       "inputs": {
-        "nixpkgs": "nixpkgs"
+        "nixpkgs": "nixpkgs",
+        "qingjian-data": "qingjian-data",
+        "qingjian-model": "qingjian-model"
       }
     }
   },

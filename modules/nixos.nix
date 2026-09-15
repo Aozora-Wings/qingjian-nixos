@@ -1,18 +1,27 @@
 # 青简 NixOS 模块：
 #   1) 把 fcitx5 插件并进 `i18n.inputMethod.fcitx5.addons`（桌面机共用）；
 #   2) 以用户级 systemd 服务拉起 qingjian-server，并把数据目录以
-#      QINGJIAN_DATA_DIR 注入（数据由 nixos-config 的 flake=false 二进制 input 提供）。
+#      QINGJIAN_DATA_DIR 注入（数据默认由本 flake 的 qingjian-data / qingjian-model
+#      input 组装，启用即默认载入；需要自定义时用 services.qingjian.dataDir 覆盖）。
 # 用法（nixos-config）：
 #   qingjian.url = "github:Aozora-Wings/qingjian-nixos";
 #   （启用处）imports = [ inputs.qingjian.nixosModules.default ];
-#   services.qingjian = {
-#     enable = true;
-#     dataDir = inputs.qingjian-data;   # flake=false 的 release 数据包
-#   };
-{ qingjianFcitx5, qingjianServer }:
-{ config, lib, ... }:
+#   services.qingjian.enable = true;
+{ qingjianFcitx5, qingjianServer, dataPackage, modelPackage }:
+{ config, lib, pkgs, ... }:
 let
   cfg = config.services.qingjian;
+
+  # 默认数据根：上游 release 数据包（扁平 dict/lm/glossary + model.qjm）重排为
+  # 模块约定结构（data/generated/* + data/model/model.qjm）。assets/ 可选，缺失自动降级。
+  # store 输入只读，复制后放开写权限再清理 macOS AppleDouble 冗余（._ 前缀）。
+  assembledData = pkgs.runCommand "qingjian-data" { } ''
+    mkdir -p $out/data/generated $out/data/model
+    cp -r ${dataPackage}/. $out/data/generated/
+    chmod -R u+w $out/data/generated
+    find $out -name '._*' -delete
+    cp ${modelPackage} $out/data/model/model.qjm
+  '';
 in
 {
   options.services.qingjian = {
@@ -20,10 +29,12 @@ in
 
     dataDir = lib.mkOption {
       type = lib.types.path;
+      default = assembledData;
+      defaultText = lib.literalExpression "fork 内置数据包组装（qingjian-data + qingjian-model）";
       description = ''
         青简产品数据根目录（含 data/generated、data/model、assets 的子目录）。
-        由 nixos-config 以 flake=false 的二进制 input 提供，如
-        `qingjian-data.url = "https://<镜像>/.../qingjian-data.tar.gz"; flake = false;`
+        默认由本 flake 的 qingjian-data / qingjian-model input 组装；需要
+        换用其他数据源时覆盖为自定义目录。
       '';
     };
 
