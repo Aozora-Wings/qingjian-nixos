@@ -9,10 +9,10 @@
   inputs = {
     nixpkgs.url = "git+https://mirrors.nju.edu.cn/git/nixpkgs.git?ref=nixpkgs-unstable&shallow=1";
     # 官方源码（crates 平台逻辑等；官方尚无 apps/linux，linux server/插件在本仓库维护）。
-    # flake=false 拉 main tar（ghfast 镜像，境内可拉）；官方更新时
-    # `nix flake lock --update-input qingjian` 即可跟进（无需 rebase 整树）。
+    # git 方式锁定 rev（官方 main 更新后旧 rev 稳定，不会像 tarball 那样内容变了报 narHash mismatch）；
+    # 官方更新时 `nix flake lock --update-input qingjian` 跟进。
     qingjian = {
-      url = "https://ghfast.top/https://github.com/qingjian-team/qingjian/archive/refs/heads/main.tar.gz";
+      url = "git+https://ghfast.top/https://github.com/qingjian-team/qingjian?ref=main&shallow=1";
       flake = false;
     };
     # 上游数据 tar.gz（扁平 dict/lm/glossary，重排由模块内 runCommand 完成）

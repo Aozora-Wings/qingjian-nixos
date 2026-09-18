@@ -20,14 +20,19 @@
     "qingjian": {
       "flake": false,
       "locked": {
-        "lastModified": 1789698294,
-        "narHash": "sha256-zloMl8scHeinfnD7n4iTVarVL1BO2eKOAZVT6cUp8bg=",
-        "type": "tarball",
-        "url": "https://ghfast.top/https://github.com/qingjian-team/qingjian/archive/refs/heads/main.tar.gz"
+        "lastModified": 1789701321,
+        "narHash": "sha256-lJUf1uMxasYWItPT1F82Be2n/2G8ch6r0gQH9Z5AkVA=",
+        "ref": "main",
+        "rev": "25ac56d99c6e230876768e393beddedd3c7a163f",
+        "shallow": true,
+        "type": "git",
+        "url": "https://ghfast.top/https://github.com/qingjian-team/qingjian"
       },
       "original": {
-        "type": "tarball",
-        "url": "https://ghfast.top/https://github.com/qingjian-team/qingjian/archive/refs/heads/main.tar.gz"
+        "ref": "main",
+        "shallow": true,
+        "type": "git",
+        "url": "https://ghfast.top/https://github.com/qingjian-team/qingjian"
       }
     },
     "qingjian-data": {
