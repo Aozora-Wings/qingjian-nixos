@@ -24,7 +24,7 @@ use qingjian_platform::protocol::{ClientMessage, Frame, ScreenRect, ServerMessag
 
 pub use self::candidates::{CandidateSink, NoopSink};
 use self::composed::Composed;
-pub use self::config::RouterConfig;
+pub use self::config::{RouterConfig, load_merged_config};
 use self::reload::ConfigReload;
 pub use self::reload::attach_cloud;
 pub use self::rescore::find_model;

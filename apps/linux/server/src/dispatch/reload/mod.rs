@@ -62,19 +62,25 @@ impl Router {
         &mut self,
         config: &Config,
         config_path: PathBuf,
+        fcitx5_path: Option<PathBuf>,
         bundled_dicts_dir: Option<PathBuf>,
         user_dir: Option<PathBuf>,
     ) {
         let last_mtime = mtime(&config_path);
         self.reload = Some(ConfigReload {
             config_path,
+            fcitx5_path,
             last_check: Instant::now(),
             bundled_dicts_dir,
             user_dir,
             last_mtime,
+            fcitx5_mtime: None,
             applied_predict: config.predict.clone(),
             applied_dictionaries: config.dictionaries.clone(),
         });
+        if let Some(reload) = &mut self.reload {
+            reload.fcitx5_mtime = reload.fcitx5_path.as_deref().and_then(mtime);
+        }
     }
 
     /// 空闲时调；一秒内只真正看一次文件。解析失败保持原配置，mtime 照记（不每秒重试同一个坏文件）。
@@ -87,17 +93,20 @@ impl Router {
         }
         reload.last_check = Instant::now();
         let current = mtime(&reload.config_path);
-        if current == reload.last_mtime {
+        let fcitx5_current = reload.fcitx5_path.as_deref().and_then(mtime);
+        if current == reload.last_mtime && fcitx5_current == reload.fcitx5_mtime {
             return;
         }
         reload.last_mtime = current;
+        reload.fcitx5_mtime = fcitx5_current;
         let path = reload.config_path.clone();
-        match Config::load(&path) {
-            Ok(config) => {
+        let fcitx5_path = reload.fcitx5_path.clone();
+        match super::config::load_merged_config(Some(&path), fcitx5_path.as_deref()) {
+            Some(config) => {
                 self.apply_config(&config);
                 tracing::info!("配置已热加载");
             }
-            Err(error) => tracing::error!(%error, "配置热加载解析失败，保持原配置"),
+            None => tracing::error!("配置热加载解析失败，保持原配置"),
         }
     }
 

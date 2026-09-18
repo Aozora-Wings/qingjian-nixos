@@ -1,11 +1,17 @@
 #include "qingjian.h"
 
 #include <algorithm>
+#include <fcntl.h>
 #include <cstdio>
+#include <cstdlib>
+#include <filesystem>
+#include <fstream>
 #include <string>
 #include <utility>
 #include <vector>
 
+#include <fcitx-utils/standardpath.h>
+#include <fcitx-config/iniparser.h>
 #include <fcitx/inputcontext.h>
 #include <fcitx/inputmethodentry.h>
 #include <fcitx/inputpanel.h>
@@ -361,6 +367,177 @@ void QingjianEngine::applyFrame(fcitx::InputContext *ic, const qj::Value &frame)
 void QingjianEngine::clearPanel(fcitx::InputContext *ic) {
     ic->inputPanel().reset();
     ic->updateUserInterface(fcitx::UserInterfaceComponent::InputPanel);
+}
+
+
+// —— 配置：fcitx5 界面可编辑；保存时把可迁移键写成 config.fcitx5.toml 供 server 合并 ——
+
+namespace {
+
+// ~/.config/qingjian（XDG_CONFIG_HOME 优先）；取不到家目录返回空串。
+std::string qingjianConfigDir() {
+    if (const char *xdg = std::getenv("XDG_CONFIG_HOME"); xdg && *xdg) {
+        return std::string(xdg) + "/qingjian";
+    }
+    if (const char *home = std::getenv("HOME"); home && *home) {
+        return std::string(home) + "/.config/qingjian";
+    }
+    return {};
+}
+
+// 值都是简单 ASCII 或拼音串，只转义基本符号即可。
+std::string qjTomlEscape(const std::string &text) {
+    std::string out;
+    out.reserve(text.size());
+    for (char c : text) {
+        switch (c) {
+        case '\\':
+            out += "\\\\";
+            break;
+        case '"':
+            out += "\\\"";
+            break;
+        case '\n':
+            out += "\\n";
+            break;
+        case '\t':
+            out += "\\t";
+            break;
+        default:
+            out += c;
+        }
+    }
+    return out;
+}
+
+std::string themeToToml(ThemeMode mode) {
+    switch (mode) {
+    case ThemeMode::System:
+        return "system";
+    case ThemeMode::Light:
+        return "light";
+    default:
+        return "dark";
+    }
+}
+
+std::string layoutToToml(LayoutMode mode) {
+    switch (mode) {
+    case LayoutMode::Vertical:
+        return "vertical";
+    default:
+        return "horizontal";
+    }
+}
+
+std::string preeditToToml(PreeditMode mode) {
+    switch (mode) {
+    case PreeditMode::Both:
+        return "both";
+    case PreeditMode::Inline:
+        return "inline";
+    default:
+        return "window";
+    }
+}
+
+std::string boolToToml(bool value) { return value ? "true" : "false"; }
+
+} // namespace
+
+void QingjianEngine::setConfig(const fcitx::RawConfig &config) {
+    config_.load(config);
+    saveQingjianConfig();
+}
+
+void QingjianEngine::reloadConfig() {
+    // 从 fcitx5 的 addon 配置存储读（conf/qingjian.conf）。
+    fcitx::RawConfig raw;
+    auto file = fcitx::StandardPath::global().open(
+        fcitx::StandardPath::Type::Config, "conf/qingjian.conf",
+        O_RDONLY);
+    if (file.fd() >= 0) {
+        fcitx::readFromIni(raw, file.fd());
+    }
+    config_.load(raw);
+}
+
+void QingjianEngine::saveQingjianConfig() {
+    std::string dir = qingjianConfigDir();
+    if (dir.empty()) {
+        return;
+    }
+    std::error_code ec;
+    std::filesystem::create_directories(dir, ec);
+    if (ec) {
+        return;
+    }
+    std::string path = dir + "/config.fcitx5.toml";
+    std::string toml;
+    toml += "[general]\n";
+    toml += "learning_language = \"" + qjTomlEscape(*config_.learningLanguage) + "\"\n";
+    toml += "page_size = " + std::to_string(*config_.pageSize) + "\n";
+    toml += "page_keys = \"" + qjTomlEscape(*config_.pageKeys) + "\"\n";
+    toml += "theme = \"" + themeToToml(*config_.theme) + "\"\n";
+    toml += "layout = \"" + layoutToToml(*config_.layout) + "\"\n";
+    toml += "preedit = \"" + preeditToToml(*config_.preedit) + "\"\n";
+    toml += "english_candidates = " + boolToToml(*config_.englishCandidates) + "\n";
+    toml += "full_width_punctuation = " + boolToToml(*config_.fullWidthPunctuation) + "\n";
+    toml += "shuangpin = \"" + qjTomlEscape(*config_.shuangpin) + "\"\n";
+    toml += "\n[shortcut]\n";
+    toml += "expression = \"" + qjTomlEscape(*config_.expression) + "\"\n";
+    toml += "question = \"" + qjTomlEscape(*config_.question) + "\"\n";
+    toml += "translation = \"" + qjTomlEscape(*config_.translation) + "\"\n";
+    toml += "translation_second = \"" + qjTomlEscape(*config_.translationSecond) + "\"\n";
+    toml += "translate_selection = \"" + qjTomlEscape(*config_.translateSelection) + "\"\n";
+    toml += "delete_candidate = \"" + qjTomlEscape(*config_.deleteCandidate) + "\"\n";
+    toml += "\n[fuzzy]\n";
+    {
+        // 模糊音：从 fuzzy_rules（逗号分隔）逐项解析，未列出的全关。
+        bool zzh = false, cch = false, ssh = false, nl = false, fh = false, lr = false,
+             anang = false, eneng = false, ining = false;
+        const std::string rules = *config_.fuzzyRules;
+        std::string token;
+        for (size_t i = 0; i <= rules.size(); ++i) {
+            if (i == rules.size() || rules[i] == ',' || rules[i] == ' ') {
+                if (token == "z_zh") zzh = true;
+                else if (token == "c_ch") cch = true;
+                else if (token == "s_sh") ssh = true;
+                else if (token == "n_l") nl = true;
+                else if (token == "f_h") fh = true;
+                else if (token == "l_r") lr = true;
+                else if (token == "an_ang") anang = true;
+                else if (token == "en_eng") eneng = true;
+                else if (token == "in_ing") ining = true;
+                token.clear();
+            } else {
+                token += rules[i];
+            }
+        }
+        toml += "z_zh = " + boolToToml(zzh) + "\n";
+        toml += "c_ch = " + boolToToml(cch) + "\n";
+        toml += "s_sh = " + boolToToml(ssh) + "\n";
+        toml += "n_l = " + boolToToml(nl) + "\n";
+        toml += "f_h = " + boolToToml(fh) + "\n";
+        toml += "l_r = " + boolToToml(lr) + "\n";
+        toml += "an_ang = " + boolToToml(anang) + "\n";
+        toml += "en_eng = " + boolToToml(eneng) + "\n";
+        toml += "in_ing = " + boolToToml(ining) + "\n";
+    }
+    toml += "\n[dictionaries]\n";
+    toml += "domains = [";
+    const auto &domains = *config_.domains;
+    for (size_t i = 0; i < domains.size(); ++i) {
+        if (i) {
+            toml += ", ";
+        }
+        toml += "\"" + qjTomlEscape(domains[i]) + "\"";
+    }
+    toml += "]\n";
+    toml += "\n[model]\n";
+    toml += "enabled = " + boolToToml(*config_.modelEnabled) + "\n";
+    std::ofstream out(path);
+    out << toml;
 }
 
 class QingjianFactory : public fcitx::AddonFactory {

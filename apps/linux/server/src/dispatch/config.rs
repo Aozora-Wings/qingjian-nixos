@@ -1,3 +1,5 @@
+use std::path::Path;
+
 use qingjian_core::ShuangpinScheme;
 use qingjian_platform::protocol::KeyModifiers;
 use qingjian_platform::{AppsConfig, Config, KeyCombo, LayoutMode, ThemeMode};
@@ -86,5 +88,37 @@ impl From<&Config> for RouterConfig {
 impl Default for RouterConfig {
     fn default() -> Self {
         Self::from(&Config::default())
+    }
+}
+
+
+/// 合并加载配置：`config.toml` 为底，`config.fcitx5.toml`（fcitx5 配置界面保存的键）覆盖。
+/// 主文件不存在按默认值为底；任一文件解析失败返回 `None`（调用方保持原配置 / 退回默认）。
+pub fn load_merged_config(
+    config_path: Option<&Path>,
+    fcitx5_path: Option<&Path>,
+) -> Option<Config> {
+    let read = |path: &Path| std::fs::read_to_string(path).ok();
+    let mut doc = match config_path.and_then(read) {
+        Some(source) => toml_edit::DocumentMut::from_str(&source).ok()?,
+        None => toml_edit::DocumentMut::new(),
+    };
+    if let Some(source) = fcitx5_path.and_then(read) {
+        if let Ok(over) = toml_edit::DocumentMut::from_str(&source) {
+            merge_tables(doc.as_table_mut(), over.as_table());
+        }
+    }
+    toml::from_str(&doc.to_string()).ok()
+}
+
+fn merge_tables(base: &mut toml_edit::Table, over: &toml_edit::Table) {
+    for (key, item) in over.iter() {
+        if let Some(toml_edit::Item::Table(base_child)) = base.get_mut(key) {
+            if let toml_edit::Item::Table(over_child) = item {
+                merge_tables(base_child, over_child);
+                continue;
+            }
+        }
+        base.insert(key, item.clone());
     }
 }

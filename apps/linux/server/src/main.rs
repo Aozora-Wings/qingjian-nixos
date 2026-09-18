@@ -28,14 +28,24 @@ fn config_path() -> Option<PathBuf> {
         .map(|dir| dir.join("qingjian").join("config.toml"))
 }
 
-/// 文件不存在按默认值；解析失败记错误退回默认。
+/// fcitx5 插件保存的覆盖配置：`~/.config/qingjian/config.fcitx5.toml`。
+fn fcitx5_config_path() -> Option<PathBuf> {
+    config_path().and_then(|path| path.parent().map(|dir| dir.join("config.fcitx5.toml")))
+}
+
+/// 合并加载：`config.toml` 为底，fcitx5 插件界面保存的 `config.fcitx5.toml` 覆盖（fcitx5 侧优先）。
+/// 解析失败记错误退回默认。
 fn load_config() -> Config {
-    match config_path() {
-        Some(path) => Config::load(&path).unwrap_or_else(|error| {
-            tracing::error!(%error, path = %path.display(), "配置解析失败，用默认值");
+    let path = config_path();
+    let fcitx5_path = fcitx5_config_path();
+    match dispatch::load_merged_config(path.as_deref(), fcitx5_path.as_deref()) {
+        Some(config) => config,
+        None => {
+            if let Some(path) = &path {
+                tracing::error!(path = %path.display(), "配置解析失败，用默认值");
+            }
             Config::default()
-        }),
-        None => Config::default(),
+        }
     }
 }
 
@@ -202,7 +212,13 @@ fn main() {
     let model_path = dispatch::find_model(user_dir().as_deref(), &root);
     router.configure_local_model(model_path.clone(), &config.model);
     if let Some(path) = config_path() {
-        router.watch_config(&config, path, bundled_dicts_dir, user_dir());
+        router.watch_config(
+            &config,
+            path,
+            fcitx5_config_path(),
+            bundled_dicts_dir,
+            user_dir(),
+        );
     }
     tracing::info!(
         dict = %dict.display(),
