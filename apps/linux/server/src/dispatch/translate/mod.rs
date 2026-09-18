@@ -5,6 +5,7 @@
 mod job;
 
 use qingjian_core::{Candidate, CandidateKind, CandidateList};
+use qingjian_platform::PreeditMode;
 use qingjian_platform::protocol::{
     Frame, KeyEvent, KeyModifiers, KeyOutcome, ScreenRect, ServerMessage, SessionId,
 };
@@ -99,6 +100,7 @@ impl Router {
             .unwrap_or_else(|| "翻译中…".to_owned());
         Frame {
             preedit: Vec::new(),
+            preedit_mode: PreeditMode::default(),
             cursor: 0,
             candidates: CandidateList {
                 items: vec![translate_candidate(text)],

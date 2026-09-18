@@ -1,8 +1,4 @@
-/target
-**/*.rs.bk
-.DS_Store
-*.app
-.env
-/logs
-/data
-.playwright-mcp/
+# 构建产物（瘦身后仓库只维护 apps/linux 源码）
+apps/linux/fcitx5/build/
+result
+target/

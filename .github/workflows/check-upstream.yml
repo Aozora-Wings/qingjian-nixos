@@ -1,0 +1,91 @@
+# 监控上游 qingjian 更新并验证本仓库 server 仍可构建。
+# 上游（qingjian-team/qingjian）的 crates 平台逻辑更新时：
+#   1. `nix flake lock --update-input qingjian` 拉最新 main tar，锁定新 narHash
+#   2. 若官方 crates 更新导致 vendor 内容变化（cargoHash 过期），自动提取新 hash 修复
+#   3. 构建验证通过则自动 commit + push；构建失败（server 需适配官方 API）则开 issue 通知
+#
+# 依赖仓库 Actions 写权限（Settings → Actions → General → Workflow permissions → Read and write）。
+
+name: check-upstream
+
+on:
+  schedule:
+    # 每天 02:00 UTC（北京时间 10:00）
+    - cron: "0 2 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  issues: write
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 1
+
+      - name: 安装 Nix
+        uses: determinatesystems/nix-installer-action@v16
+
+      - name: 拉最新官方源码并更新 lock
+        run: |
+          set -euo pipefail
+          nix flake lock --update-input qingjian 2>&1 | tail -3
+          if git diff --quiet flake.lock; then
+            echo "官方无更新，跳过"
+            echo "UPDATED=false" >> "$GITHUB_ENV"
+          else
+            echo "官方有更新"
+            echo "UPDATED=true" >> "$GITHUB_ENV"
+          fi
+
+      - name: 构建验证（server 与官方 crates 兼容性）
+        if: env.UPDATED == 'true'
+        run: |
+          set -uo pipefail
+          build() {
+            nix build .#qingjianServer --no-link --print-build-logs \
+              --option substituters "https://cache.nixos.org" 2>&1 | tee /tmp/build.log
+          }
+          if build; then
+            echo "构建通过"
+          else
+            # cargoHash 过期（官方 crates 更新 → vendor 内容变）时自动修复重试
+            GOT=$(grep -oP 'got:\s+sha256-\S+' /tmp/build.log | head -1 | awk '{print $2}' || true)
+            if [ -n "$GOT" ] && grep -q 'cargoHash or cargoSha256 is out of date' /tmp/build.log; then
+              echo "cargoHash 过期，更新为 $GOT"
+              sed -i "s|cargoHash = \"[^\"]*\"|cargoHash = \"$GOT\"|" packages/server.nix
+              build || { echo "::error::hash 修复后仍构建失败"; exit 1; }
+            else
+              echo "::error::非 hash 原因构建失败（官方 API 变动，需适配 server）"
+              exit 1
+            fi
+          fi
+
+      - name: 构建失败开 issue
+        if: failure()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const runUrl = `https://github.com/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
+            await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: "上游更新导致构建失败，需要适配",
+              body: `上游 qingjian 更新后 server 构建失败，详见：${runUrl}`
+            });
+
+      - name: 有更新则提交推送
+        if: env.UPDATED == 'true' && success()
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add flake.lock packages/server.nix
+          if ! git diff --cached --quiet; then
+            git commit -m "chore: 同步上游 qingjian 更新（lock + 必要时 cargoHash）"
+            git push origin main
+            echo "已推送"
+          fi

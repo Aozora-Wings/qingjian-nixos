@@ -40,6 +40,8 @@ let
     # （packages/linux-workspace.lock，由与 nixpkgs 构建相同的 cargo 版本生成；
     #  官方/nixpkgs 更新后需重新生成，见仓库 README/CI）。
     cp ${./linux-workspace.lock} $out/Cargo.lock
+    # 校验覆盖生效（防止 flake path 快照旧导致构建用官方 lock）
+    grep -q 'qingjian-linux-server' $out/Cargo.lock || { echo "FATAL: linux-workspace.lock 覆盖未生效"; exit 1; }
   '';
 in
 rustPlatform' {
@@ -56,7 +58,7 @@ rustPlatform' {
     cargoTestFlags = "-p qingjian-linux-server";
   };
 
-  cargoHash = "sha256-KwRui6mXABgwpcxTP3Afrn5m6gs3IQwRG7adiiEmzvk=";
+  cargoHash = "sha256-KKPY96BwNQ7alIww/LamMu1wDd3w13YOTvgmS3jzegQ=";
 
   # 依赖下载已在 fetchCargoVendor（镜像版）阶段完成，构建期 cargo 由
   # cargoSetupHook 自动配置使用 vendored 依赖，无需再写 registry 配置。

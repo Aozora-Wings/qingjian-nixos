@@ -1,11 +1,7 @@
 #!/usr/bin/env bash
-# 推之前跑全 workspace 测试（提交时不跑，太慢）；跳过：git push --no-verify
+# 瘦身后本地不维护官方 crates，全 workspace 测试移到 CI（check-upstream.yml 构建验证；
+# 后续可在该 workflow 加 test job）。本地推送前如需验证：`nix build .#qingjianServer`。
+# 跳过：git push --no-verify
 set -euo pipefail
 cd "$(git rev-parse --show-toplevel)"
-# Linux 移植：macOS 专用 crate（qingjian-macos，依赖 objc2）在 Linux 上无法编译，
-# 与 pre-commit 的 clippy 保持一致排除；macOS/Windows 上保持原样。
-if [[ "$(uname)" == "Linux" ]]; then
-  cargo test --workspace --locked --exclude qingjian-macos
-else
-  cargo test --workspace --locked
-fi
+echo "提示：完整构建/测试由 CI 负责；本地验证用 nix build .#qingjianServer"

@@ -1,4 +1,7 @@
 #!/usr/bin/env bash
+# 瘦身后本地仓库不维护官方 crates（flake input 提供，构建时合并），
+# cargo fmt/clippy 等全 workspace 检查由 GitHub Actions（check-upstream.yml）负责。
+# 此处只保留轻量的仓库卫生检查；需要本地完整验证时用 `nix build .#qingjianServer`。
 # 启用：git config core.hooksPath .githooks；跳过：git commit --no-verify
 set -euo pipefail
 cd "$(git rev-parse --show-toplevel)"
@@ -12,13 +15,4 @@ if [[ -n "$staged_rs" ]]; then
     echo "装饰性分隔注释不要，用空行 + 语义排序分组" >&2
     exit 1
   fi
-fi
-
-cargo fmt --all --check
-# Linux 移植：macOS 专用 crate（qingjian-macos，依赖 objc2）在 Linux 上无法编译，
-# 全量 clippy 在 Linux 上排除之；macOS/Windows 上保持原样。
-if [[ "$(uname)" == "Linux" ]]; then
-  cargo clippy --workspace --all-targets --exclude qingjian-macos -- -D warnings
-else
-  cargo clippy --all-targets -- -D warnings
 fi
