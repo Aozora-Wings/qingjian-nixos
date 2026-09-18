@@ -1,0 +1,67 @@
+# 自动同步上游数据包（qingjian-data / qingjian-model）。
+# 上游 qingjian-team 在 tools/release/data.lock 维护 tag + sha256，
+# 本 workflow 每两天检查一次：拉 data.lock → 校验资产 sha256 →
+# 更新 flake.nix 的 release URL → nix flake lock 重锁 narHash →
+# 有变化则提交推送。nixos-config 侧拉新 rev 后即可用新数据。
+#
+# 注意：推送到本仓库 main 需要 Actions 写权限
+# （Settings → Actions → General → Workflow permissions → Read and write permissions）。
+
+name: update-data
+
+on:
+  schedule:
+    # 每两天 22:00 UTC（北京时间次日 06:00）
+    - cron: "0 22 */2 * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 1
+
+      - name: 安装 Nix
+        uses: determinatesystems/nix-installer-action@v16
+
+      - name: 拉取官方 data.lock 并校验资产
+        run: |
+          set -euo pipefail
+          curl -fsSL https://raw.githubusercontent.com/qingjian-team/qingjian/main/tools/release/data.lock -o /tmp/data.lock
+          TAG=$(awk -F' = ' '/^tag = /{print $2}' /tmp/data.lock)
+          echo "官方数据 tag: $TAG"
+          # 下载两个资产并与 data.lock 中的 sha256 比对
+          for f in qingjian-data.tar.gz model.qjm; do
+            h=$(awk -v f="$f" -F' = ' '$1==f{print $2}' /tmp/data.lock)
+            curl -fsSL "https://github.com/qingjian-team/qingjian/releases/download/${TAG}/${f}" -o "/tmp/$f"
+            echo "$h  /tmp/$f" | sha256sum -c -
+          done
+          echo "TAG=$TAG" >> "$GITHUB_ENV"
+
+      - name: 同步 flake.nix URL 并重锁
+        run: |
+          set -euo pipefail
+          # 把 input url 里的旧 tag（data/ 或 data-vN/）换成官方当前 tag
+          sed -i "s|releases/download/data[^/]*/|releases/download/${TAG}/|g" flake.nix
+          grep -n 'releases/download' flake.nix
+          nix flake lock --update-input qingjian-data --update-input qingjian-model
+          git diff --stat
+
+      - name: 有变化则提交推送
+        run: |
+          if git diff --quiet flake.nix flake.lock; then
+            echo "数据无变化，跳过推送"
+          else
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add flake.nix flake.lock
+            git commit -m "chore: 同步官方数据包到 ${TAG}"
+            git push origin main
+            echo "已推送 ${TAG}"
+          fi

@@ -3,18 +3,19 @@
 
   # 与 nixos-config 一致：nixpkgs 走南大镜像，避免 GitHub 直连不稳。
   # 数据包（qingjian-data / qingjian-model）是上游 qingjian-team Release 资产，
-  # 走 ghfast.top 加速镜像（境内可拉）；flake=false 锁定 URL，更新时
-  # `nix flake lock --update-input qingjian-data` 即可。
+  # 走 ghfast.top 加速镜像（境内可拉）；tag（当前 data-v1）由官方
+  # tools/release/data.lock 控制，数据更新时由 CI（.github/workflows/update-data.yml）
+  # 自动同步 URL 与 narHash。
   inputs = {
     nixpkgs.url = "git+https://mirrors.nju.edu.cn/git/nixpkgs.git?ref=nixpkgs-unstable&shallow=1";
     # 上游数据 tar.gz（扁平 dict/lm/glossary，重排由模块内 runCommand 完成）
     qingjian-data = {
-      url = "https://ghfast.top/https://github.com/qingjian-team/qingjian/releases/download/data/qingjian-data.tar.gz";
+      url = "https://ghfast.top/https://github.com/qingjian-team/qingjian/releases/download/data-v1/qingjian-data.tar.gz";
       flake = false;
     };
     # 上游整句模型（单文件 model.qjm）
     qingjian-model = {
-      url = "https://ghfast.top/https://github.com/qingjian-team/qingjian/releases/download/data/model.qjm";
+      url = "https://ghfast.top/https://github.com/qingjian-team/qingjian/releases/download/data-v1/model.qjm";
       flake = false;
     };
   };
