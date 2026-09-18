@@ -2,7 +2,7 @@
 
 use qingjian_platform::protocol::{
     ClientMessage, Frame, KeyEvent, KeyOutcome, PROTOCOL_VERSION, ServerMessage, SessionId,
-};
+, InputSettings};
 
 use super::Router;
 use super::key::Effect;
@@ -83,6 +83,8 @@ impl Router {
             ClientMessage::SyncMode { session } => Some(ServerMessage::ModeSync {
                 session,
                 english: self.take_pending_mode(),
+                # 官方新协议字段：按键行为设置（热加载用）。先用默认，配置项迁移时接 self.config。
+                input: InputSettings::default(),
             }),
             ClientMessage::ImeSwitched { session } => {
                 tracing::debug!(?session, "切成了别的输入法");
