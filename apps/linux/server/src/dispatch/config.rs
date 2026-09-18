@@ -1,4 +1,5 @@
 use std::path::Path;
+use std::str::FromStr;
 
 use qingjian_core::ShuangpinScheme;
 use qingjian_platform::protocol::KeyModifiers;
