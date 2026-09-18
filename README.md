@@ -36,19 +36,20 @@ qingjian-nixos = {
 };
 ```
 
-桌面环境共用模块里启用：
+桌面环境共用模块里**导入模块**（注意：`fcitx5.addons` 要的是包，不是模块——插件包由模块内部自动加入，不用也不能把 `nixosModules.default` 塞进 `addons`）：
 
 ```nix
 # fcitx5 输入法（系统级模块）
 { config, pkgs, lib, inputs, ... }:
 {
+  imports = [ inputs.qingjian-nixos.nixosModules.default ];
+  services.qingjian.enable = true;
+
   i18n.inputMethod = {
     type = "fcitx5";
     enable = true;
     fcitx5.waylandFrontend = true;
-    fcitx5.addons = [
-      inputs.qingjian-nixos.nixosModules.default
-    ];
+    # fcitx5.addons 无需手写 qingjian——模块内部已加（含 fcitx5-rime 等其他 addon 时照常并列）
   };
   environment.sessionVariables = {
     GTK_IM_MODULE = "fcitx";
@@ -57,6 +58,8 @@ qingjian-nixos = {
   };
 }
 ```
+
+启用后模块自动做两件事：把 `qingjian` 插件并进 `fcitx5.addons`；创建用户级 systemd 服务 `qingjian-server`（`graphical-session` 会话拉起，`QINGJIAN_DATA_DIR` 注入数据目录，默认用内置数据包，可用 `services.qingjian.dataDir` 覆盖）。
 
 > 数据包体积大，建议在 nixos-config 里以二进制包形式单独引用（`flake = false` + `url` 指向 GitHub release），而不是打进模块默认包。具体见 `modules/nixos.nix` 的 `services.qingjian.dataDir` 注入方式。
 
