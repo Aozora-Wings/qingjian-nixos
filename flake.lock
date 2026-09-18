@@ -17,6 +17,19 @@
         "url": "https://mirrors.nju.edu.cn/git/nixpkgs.git"
       }
     },
+    "qingjian": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1789698294,
+        "narHash": "sha256-zloMl8scHeinfnD7n4iTVarVL1BO2eKOAZVT6cUp8bg=",
+        "type": "tarball",
+        "url": "https://ghfast.top/https://github.com/qingjian-team/qingjian/archive/refs/heads/main.tar.gz"
+      },
+      "original": {
+        "type": "tarball",
+        "url": "https://ghfast.top/https://github.com/qingjian-team/qingjian/archive/refs/heads/main.tar.gz"
+      }
+    },
     "qingjian-data": {
       "flake": false,
       "locked": {
@@ -45,6 +58,7 @@
     "root": {
       "inputs": {
         "nixpkgs": "nixpkgs",
+        "qingjian": "qingjian",
         "qingjian-data": "qingjian-data",
         "qingjian-model": "qingjian-model"
       }

@@ -8,6 +8,13 @@
   # 自动同步 URL 与 narHash。
   inputs = {
     nixpkgs.url = "git+https://mirrors.nju.edu.cn/git/nixpkgs.git?ref=nixpkgs-unstable&shallow=1";
+    # 官方源码（crates 平台逻辑等；官方尚无 apps/linux，linux server/插件在本仓库维护）。
+    # flake=false 拉 main tar（ghfast 镜像，境内可拉）；官方更新时
+    # `nix flake lock --update-input qingjian` 即可跟进（无需 rebase 整树）。
+    qingjian = {
+      url = "https://ghfast.top/https://github.com/qingjian-team/qingjian/archive/refs/heads/main.tar.gz";
+      flake = false;
+    };
     # 上游数据 tar.gz（扁平 dict/lm/glossary，重排由模块内 runCommand 完成）
     qingjian-data = {
       url = "https://ghfast.top/https://github.com/qingjian-team/qingjian/releases/download/data-v1/qingjian-data.tar.gz";
@@ -24,7 +31,7 @@
     let
       system = "x86_64-linux";
       pkgs = import nixpkgs { inherit system; };
-      qingjianServer = pkgs.callPackage ./packages/server.nix { };
+      qingjianServer = pkgs.callPackage ./packages/server.nix { qingjianSrc = inputs.qingjian; };
       qingjianFcitx5 = pkgs.callPackage ./packages/fcitx5.nix { };
     in {
       packages.${system} = {
@@ -39,6 +46,35 @@
         # 启用 services.qingjian.enable 即默认载入，无需 nixos-config 侧提供。
         dataPackage = inputs."qingjian-data";
         modelPackage = inputs."qingjian-model";
+      };
+
+      # 生成完整 Cargo.lock（官方 lock 不含 apps/linux/server 依赖）。
+      # 用 nixpkgs cargo（与 Nix 构建的 vendor 解析一致）；官方 main 或
+      # nixpkgs 更新后需重新生成：`nix run .#gen-lock -- packages/linux-workspace.lock`
+      apps.${system}.gen-lock = {
+        type = "app";
+        program = "${pkgs.writeShellScript "qingjian-gen-lock" ''
+          set -euo pipefail
+          OUT="${toString ./packages/linux-workspace.lock}"
+          if [ $# -ge 1 ]; then OUT="$1"; fi
+          # 解析为绝对路径（后面会 cd 进临时目录）
+          OUT="$(realpath -m "$OUT")"
+          export PATH=${pkgs.cargo}/bin:${pkgs.git}/bin:$PATH
+          export CARGO_REGISTRIES_CRATES_IO_INDEX="sparse+https://rsproxy.cn/index/"
+          TMP="$(mktemp -d)"
+          cp -r ${inputs.qingjian}/. "$TMP"/
+          chmod -R u+w "$TMP"
+          cp -r ${./apps/linux} "$TMP/apps/linux/"
+          chmod -R u+w "$TMP"
+          rm -rf "$TMP/apps/linux/fcitx5/build" "$TMP/target" "$TMP/result"
+          sed -i 's|"apps/windows/settings",|"apps/windows/settings", "apps/linux/server",|' "$TMP/Cargo.toml"
+          sed -i '/^\[workspace.dependencies\]$/a libc = "0.2"' "$TMP/Cargo.toml"
+          cd "$TMP"
+          cargo generate-lockfile
+          cp Cargo.lock "$OUT"
+          rm -rf "$TMP"
+          echo "lock 已生成：$OUT"
+        ''}";
       };
 
       devShells.${system}.default = pkgs.mkShell {
