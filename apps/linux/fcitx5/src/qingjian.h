@@ -71,8 +71,20 @@ public:
 
     // [fuzzy]（合并为逗号分隔项）+ [dictionaries] + [model]
     ::fcitx::Option<std::string> fuzzyRules{this, "fuzzy_rules", "模糊音", ""};
-    ::fcitx::Option<std::vector<std::string>> domains{this, "domains", "附加领域词库",
-                                             {"idioms"}};
+    // 随包领域词库：勾选式开关（与 Windows「词库」页一致）；默认只开成语，对齐 server DEFAULT_DOMAINS。
+    // key = 词库文件名主干（config.toml [dictionaries] domains 认的值）。
+    ::fcitx::Option<bool> dictAnimals{this, "dict_animals", "动物词库", false};
+    ::fcitx::Option<bool> dictAutomotive{this, "dict_automotive", "汽车词库", false};
+    ::fcitx::Option<bool> dictFinance{this, "dict_finance", "财经词库", false};
+    ::fcitx::Option<bool> dictFood{this, "dict_food", "饮食词库", false};
+    ::fcitx::Option<bool> dictHistoricalFigures{this, "dict_historical_figures",
+                                       "历史人物词库", false};
+    ::fcitx::Option<bool> dictIdioms{this, "dict_idioms", "成语词库", true};
+    ::fcitx::Option<bool> dictItComputing{this, "dict_it_computing", "IT 与计算机词库", false};
+    ::fcitx::Option<bool> dictLaw{this, "dict_law", "法律词库", false};
+    ::fcitx::Option<bool> dictMedicine{this, "dict_medicine", "医学词库", false};
+    ::fcitx::Option<bool> dictPlaces{this, "dict_places", "地名词库", false};
+    ::fcitx::Option<bool> dictPoetryLines{this, "dict_poetry_lines", "诗词名句词库", false};
     ::fcitx::Option<bool> modelEnabled{this, "model_enabled", "本地整句模型", true};
 };
 class QingjianEngine : public fcitx::InputMethodEngine {

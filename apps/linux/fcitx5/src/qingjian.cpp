@@ -531,12 +531,32 @@ void QingjianEngine::saveQingjianConfig() {
     }
     toml += "\n[dictionaries]\n";
     toml += "domains = [";
-    const auto &domains = *config_.domains;
-    for (size_t i = 0; i < domains.size(); ++i) {
-        if (i) {
-            toml += ", ";
-        }
-        toml += "\"" + qjTomlEscape(domains[i]) + "\"";
+    {
+        // 勾选式词库（与 Windows「词库」页一致）：把勾选的领域名（文件名主干）列进数组。
+        bool first = true;
+        auto addDomain = [&](const char *name, const ::fcitx::Option<bool> &opt) {
+            if (!*opt) {
+                return;
+            }
+            if (!first) {
+                toml += ", ";
+            }
+            first = false;
+            toml += "\"";
+            toml += name;
+            toml += "\"";
+        };
+        addDomain("animals", config_.dictAnimals);
+        addDomain("automotive", config_.dictAutomotive);
+        addDomain("finance", config_.dictFinance);
+        addDomain("food", config_.dictFood);
+        addDomain("historical_figures", config_.dictHistoricalFigures);
+        addDomain("idioms", config_.dictIdioms);
+        addDomain("it_computing", config_.dictItComputing);
+        addDomain("law", config_.dictLaw);
+        addDomain("medicine", config_.dictMedicine);
+        addDomain("places", config_.dictPlaces);
+        addDomain("poetry_lines", config_.dictPoetryLines);
     }
     toml += "]\n";
     toml += "\n[model]\n";
