@@ -338,6 +338,7 @@ void QingjianEngine::applyFrame(fcitx::InputContext *ic, const qj::Value &frame)
     // 不会被 fcitx5 拦截），全部按键都到达 engine 转发给 server，高亮与分页以 server 为准。
     if (items && !items->arr.empty()) {
         std::vector<fcitx::Text> contents;
+        int pageIndex = 0;  // 页内序号（0-based），显示 1-based，与 server 数字选词 digit-1 对齐
         for (const auto &item : items->arr) {
             const qj::Value *text = item.get("text");
             std::string candidateText = (text && text->isString()) ? text->str : "";
@@ -351,7 +352,11 @@ void QingjianEngine::applyFrame(fcitx::InputContext *ic, const qj::Value &frame)
                     candidateText += senseText->str;
                 }
             }
+            // 页内序号前缀（1-9）：DisplayOnlyCandidateList 不画序号，UI 只显示文本；
+            // server 数字选词 = page*page_size + digit - 1，页内 1-based 完全对齐。
+            candidateText = std::to_string(pageIndex + 1) + ". " + candidateText;
             contents.emplace_back(candidateText);
+            ++pageIndex;
         }
         const qj::Value *highlight = frame.get("highlight");
         int highlightIndex = (highlight && highlight->isNumber()) ? static_cast<int>(highlight->num) : 0;
