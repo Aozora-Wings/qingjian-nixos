@@ -2,13 +2,12 @@
 # 数据（data/generated、data/model、assets）不进 git、不随本包，由 NixOS 侧以
 # QINGJIAN_DATA_DIR 环境变量注入（见 modules/nixos.nix 的 services.qingjian.dataDir）。
 #
-# 源码策略（瘦身后的集成仓库）：本仓库不再 fork 官方整树——
-#   官方源码由 flake input `qingjian`（flake=false）提供；
-#   本地仓库只维护 apps/linux（linux server + fcitx5 插件源码）；
-#   构建时把两者合并：官方 crates 提供平台逻辑，apps/linux/server 挂进官方
-#   workspace（patch members + 补 libc 依赖），Cargo.lock 用预生成的
-#   packages/linux-workspace.lock（含 apps/linux/server 依赖，官方 lock 没有）。
-#   官方更新 → `nix flake lock --update-input qingjian` 跟进，无需 rebase。
+# 源码策略（方案 A：server 由官方提供）：官方 apps/linux/server 已在官方 workspace
+# （官方 Cargo.toml members 含 apps/linux/server，Cargo.lock 含其依赖），因此本包
+# 直接用 flake input `qingjian`（flake=false）的官方源码构建官方 server，本地不再
+# 维护/覆盖 apps/linux/server。本地仓库只维护 apps/linux/fcitx5（fcitx5 引导插件，
+# 见 packages/fcitx5.nix）。官方更新 → `nix flake lock --update-input qingjian`
+# 跟进；cargo 依赖变化时按构建报错更新 cargoHash（CI 已自动处理）。
 {
   lib,
   rustPlatform,
@@ -24,24 +23,12 @@ let
   fetchCargoVendor = pkgs.callPackage ./fetch-cargo-vendor.nix { };
   rustPlatform' = rustPlatform.buildRustPackage.override { inherit fetchCargoVendor; };
 
-  # 合并源码：官方仓库（crates/apps/tools）+ 本地 apps/linux。
+  # 官方源码 store 只读；cargo 构建只需读取，这里仅放开写权限以防官方输入在
+  # 构建期需要写（如生成文件），与旧合并逻辑行为保持一致。
   src = pkgs.runCommand "qingjian-linux-src" { } ''
     cp -r ${qingjianSrc}/. $out/
     chmod -R u+w $out
-    cp -r ${../apps/linux} $out/apps/linux/
-    # 本地 path 是 store 只读，cp 后需再放开写权限
-    chmod -R u+w $out
-    # 本地 path 引用可能带入的构建产物，清掉
     rm -rf $out/apps/linux/fcitx5/build $out/target $out/result
-    # 把 linux server 注册进官方 workspace（members + 官方已移除的 libc）
-    sed -i 's|"apps/windows/settings",|"apps/windows/settings", "apps/linux/server",|' $out/Cargo.toml
-    sed -i '/^\[workspace.dependencies\]$/a libc = "0.2"' $out/Cargo.toml
-    # 官方 lock 不含 apps/linux/server 依赖：用预生成的完整 lock 覆盖
-    # （packages/linux-workspace.lock，由与 nixpkgs 构建相同的 cargo 版本生成；
-    #  官方/nixpkgs 更新后需重新生成，见仓库 README/CI）。
-    cp ${./linux-workspace.lock} $out/Cargo.lock
-    # 校验覆盖生效（防止 flake path 快照旧导致构建用官方 lock）
-    grep -q 'qingjian-linux-server' $out/Cargo.lock || { echo "FATAL: linux-workspace.lock 覆盖未生效"; exit 1; }
   '';
 in
 rustPlatform' {
@@ -58,16 +45,18 @@ rustPlatform' {
     cargoTestFlags = "-p qingjian-linux-server";
   };
 
-  cargoHash = "sha256-TBj4qNrdtnjkOSe+tVd9/QNf1TczH2TiXx9ZOsvL7Z8=";
+  cargoHash = "sha256-f4qC8SHYaoh3ji8eRp/W5ik601VWoSni+MCnOFfqSMs=";
 
   # 依赖下载已在 fetchCargoVendor（镜像版）阶段完成，构建期 cargo 由
   # cargoSetupHook 自动配置使用 vendored 依赖，无需再写 registry 配置。
 
   # buildRustPackage 默认装 workspace 全部 bin；这里只装 server。
   # 注意 cargo 带 --target 构建，产物在 target/<triple>/release/ 下。
+  # 官方二进制名为 qingjian-linux-server；安装时保持 qingjian-server 名，
+  # 与 modules/nixos.nix 的 ExecStart 引用（${qingjianServer}/bin/qingjian-server）一致。
   installPhase = ''
     mkdir -p "$out/bin"
-    cp target/x86_64-unknown-linux-gnu/release/qingjian-server "$out/bin/"
+    cp target/x86_64-unknown-linux-gnu/release/qingjian-linux-server "$out/bin/qingjian-server"
   '';
 
   nativeBuildInputs = [ pkg-config ];
