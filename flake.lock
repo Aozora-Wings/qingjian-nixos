@@ -38,14 +38,14 @@
     "qingjian-data": {
       "flake": false,
       "locked": {
-        "lastModified": 1789548244,
-        "narHash": "sha256-a49agYI5eYcTWurn8fOXwEbrPyFUjRDFFMFUnoUdk44=",
+        "lastModified": 1790130607,
+        "narHash": "sha256-NONDR88X8JjhT4zhAhzSPkx8jdaQVfVhQ7dQUA9hiS8=",
         "type": "tarball",
-        "url": "https://ghfast.top/https://github.com/qingjian-team/qingjian/releases/download/data-v1/qingjian-data.tar.gz"
+        "url": "https://ghfast.top/https://github.com/qingjian-team/qingjian/releases/download/data-v2/qingjian-data.tar.gz"
       },
       "original": {
         "type": "tarball",
-        "url": "https://ghfast.top/https://github.com/qingjian-team/qingjian/releases/download/data-v1/qingjian-data.tar.gz"
+        "url": "https://ghfast.top/https://github.com/qingjian-team/qingjian/releases/download/data-v2/qingjian-data.tar.gz"
       }
     },
     "qingjian-model": {
@@ -53,11 +53,11 @@
       "locked": {
         "narHash": "sha256-41lc7nW8qKO0d51/672XPT4L6qL/CCbbX+qK3JlRCQY=",
         "type": "file",
-        "url": "https://ghfast.top/https://github.com/qingjian-team/qingjian/releases/download/data-v1/model.qjm"
+        "url": "https://ghfast.top/https://github.com/qingjian-team/qingjian/releases/download/data-v2/model.qjm"
       },
       "original": {
         "type": "file",
-        "url": "https://ghfast.top/https://github.com/qingjian-team/qingjian/releases/download/data-v1/model.qjm"
+        "url": "https://ghfast.top/https://github.com/qingjian-team/qingjian/releases/download/data-v2/model.qjm"
       }
     },
     "root": {

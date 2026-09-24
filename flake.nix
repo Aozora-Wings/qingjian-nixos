@@ -17,12 +17,12 @@
     };
     # 上游数据 tar.gz（扁平 dict/lm/glossary，重排由模块内 runCommand 完成）
     qingjian-data = {
-      url = "https://ghfast.top/https://github.com/qingjian-team/qingjian/releases/download/data-v1/qingjian-data.tar.gz";
+      url = "https://ghfast.top/https://github.com/qingjian-team/qingjian/releases/download/data-v2/qingjian-data.tar.gz";
       flake = false;
     };
     # 上游整句模型（单文件 model.qjm）
     qingjian-model = {
-      url = "https://ghfast.top/https://github.com/qingjian-team/qingjian/releases/download/data-v1/model.qjm";
+      url = "https://ghfast.top/https://github.com/qingjian-team/qingjian/releases/download/data-v2/model.qjm";
       flake = false;
     };
   };
