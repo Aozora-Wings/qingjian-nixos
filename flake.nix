@@ -8,7 +8,7 @@
   # （.github/workflows/update-data.yml）自动同步 URL 与 narHash。
   inputs = {
     nixpkgs.url = "git+https://mirrors.nju.edu.cn/git/nixpkgs.git?ref=nixpkgs-unstable&shallow=1";
-    # 官方源码（crates 平台逻辑 + apps/linux server/插件；本地仓库只维护 fcitx5 引导插件）。
+    # 官方源码（crates 平台逻辑 + apps/linux server/插件；fork 只做 Nix 分发层）。
     # git 方式锁定 rev（官方 main 更新后旧 rev 稳定，不会像 tarball 那样内容变了报 narHash mismatch）；
     # 官方更新时 `nix flake lock --update-input qingjian` 跟进。
     qingjian = {
@@ -48,35 +48,6 @@
       homeManagerModules.default = import ./modules/home.nix {
         inherit qingjianFcitx5 qingjianServer;
         dataPackage = inputs."qingjian-data";
-      };
-
-      # 生成完整 Cargo.lock（官方 lock 不含 apps/linux/server 依赖）。
-      # 用 nixpkgs cargo（与 Nix 构建的 vendor 解析一致）；官方 main 或
-      # nixpkgs 更新后需重新生成：`nix run .#gen-lock -- packages/linux-workspace.lock`
-      apps.${system}.gen-lock = {
-        type = "app";
-        program = "${pkgs.writeShellScript "qingjian-gen-lock" ''
-          set -euo pipefail
-          OUT="${toString ./packages/linux-workspace.lock}"
-          if [ $# -ge 1 ]; then OUT="$1"; fi
-          # 解析为绝对路径（后面会 cd 进临时目录）
-          OUT="$(realpath -m "$OUT")"
-          export PATH=${pkgs.cargo}/bin:${pkgs.git}/bin:$PATH
-          export CARGO_REGISTRIES_CRATES_IO_INDEX="sparse+https://rsproxy.cn/index/"
-          TMP="$(mktemp -d)"
-          cp -r ${inputs.qingjian}/. "$TMP"/
-          chmod -R u+w "$TMP"
-          cp -r ${./apps/linux} "$TMP/apps/linux/"
-          chmod -R u+w "$TMP"
-          rm -rf "$TMP/apps/linux/fcitx5/build" "$TMP/target" "$TMP/result"
-          sed -i 's|"apps/windows/settings",|"apps/windows/settings", "apps/linux/server",|' "$TMP/Cargo.toml"
-          sed -i '/^\[workspace.dependencies\]$/a libc = "0.2"' "$TMP/Cargo.toml"
-          cd "$TMP"
-          cargo generate-lockfile
-          cp Cargo.lock "$OUT"
-          rm -rf "$TMP"
-          echo "lock 已生成：$OUT"
-        ''}";
       };
 
       devShells.${system}.default = pkgs.mkShell {

@@ -3,6 +3,12 @@
 #      共享库 → ~/.local/lib/fcitx5，并用 FCITX_LIBRARY_PATH 让 fcitx5 找到库）；
 #   2) 以用户级 systemd 服务拉起 qingjian-server，QINGJIAN_RESOURCES 指向数据根
 #      （官方 server 认的环境变量）。
+#
+# 配置哲学（混合式）：基础设施（插件/服务/数据源）→ 本模块声明式 options；
+# 个人偏好（词库开关、按键、候选样式等）→ 官方运行时 ~/.config/qingjian/config.toml
+# （改完重启 qingjian-server 生效，官方 Linux 无热加载）。想声明式管默认值的用户
+# 可设 initialConfigFile：首次部署写入一份真实文件，之后仍可运行时修改，不覆盖。
+#
 # 前提：发行版已装好 fcitx5 本体 + 各框架桥接包（fcitx5、fcitx5-gtk/gtk4、fcitx5-qt）。
 # 用法（其他发行版：Arch/Ubuntu/Fedora… 装了 Nix + home-manager standalone）：
 #   { pkgs, inputs, ... }:
@@ -48,6 +54,36 @@ in
       defaultText = lib.literalExpression "qingjian-fcitx5";
       description = "fcitx5 addon 包（lib/fcitx5 + share/fcitx5/addon 布局）。";
     };
+
+    serverPackage = lib.mkOption {
+      type = lib.types.package;
+      default = qingjianServer;
+      defaultText = lib.literalExpression "qingjian-server";
+      description = "qingjian-server 包（bin/qingjian-server）。";
+    };
+
+    serverArgs = lib.mkOption {
+      type = lib.types.listOf lib.types.str;
+      default = [ ];
+      example = [ "--log-level" "debug" ];
+      description = "追加传给 qingjian-server 的命令行参数。";
+    };
+
+    extraEnvironment = lib.mkOption {
+      type = lib.types.attrsOf lib.types.str;
+      default = { };
+      example = { RUST_LOG = "debug"; };
+      description = "追加注入服务进程的环境变量（QINGJIAN_RESOURCES 已默认设置）。";
+    };
+
+    initialConfigFile = lib.mkOption {
+      type = lib.types.nullOr lib.types.path;
+      default = null;
+      description = ''
+        可选的初始配置（官方 config.toml）。设置后首次部署写入 ~/.config/qingjian/config.toml；
+        文件已存在时**不会覆盖**（保留运行时修改）。不设置则完全走官方运行时默认。
+      '';
+    };
   };
 
   config = lib.mkIf cfg.enable {
@@ -61,7 +97,17 @@ in
       "${cfg.package}/lib/fcitx5/libqingjian.so";
     home.sessionVariables.FCITX_LIBRARY_PATH = "$HOME/.local/lib/fcitx5";
 
-    # 3) 用户级服务：与 fcitx5 同 graphical-session（home-manager 的 systemd 用标准
+    # 3) 首次部署注入初始 config.toml（home.activation：真实文件、已存在不覆盖，
+    #    保留运行时修改——声明式默认 + 运行时自由）
+    home.activation.qingjianInitConfig = lib.mkIf (cfg.initialConfigFile != null)
+      (lib.hm.dag.entryAfter [ "writeBoundary" ] ''
+        if [ ! -e "$HOME/.config/qingjian/config.toml" ]; then
+          mkdir -p "$HOME/.config/qingjian"
+          install -m 600 ${cfg.initialConfigFile} "$HOME/.config/qingjian/config.toml"
+        fi
+      '');
+
+    # 4) 用户级服务：与 fcitx5 同 graphical-session（home-manager 的 systemd 用标准
     #    Unit/Service/Install 三段式，与 NixOS 模块的 serviceConfig 写法不同）
     systemd.user.services.qingjian-server = {
       Unit = {
@@ -73,10 +119,14 @@ in
       };
       Service = {
         Type = "simple";
-        ExecStart = "${qingjianServer}/bin/qingjian-server";
+        ExecStart = "${cfg.serverPackage}/bin/qingjian-server"
+          + lib.optionalString (cfg.serverArgs != [ ])
+            (" " + lib.concatStringsSep " " cfg.serverArgs);
         Restart = "on-failure";
         RestartSec = "2";
-        Environment = "QINGJIAN_RESOURCES=${cfg.dataDir}";
+        Environment =
+          [ "QINGJIAN_RESOURCES=${cfg.dataDir}" ]
+          ++ lib.mapAttrsToList (name: value: "${name}=${value}") cfg.extraEnvironment;
       };
       Install = {
         WantedBy = [ "graphical-session.target" ];
