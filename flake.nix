@@ -43,6 +43,13 @@
         dataPackage = inputs."qingjian-data";
       };
 
+      # 非 NixOS 发行版（Arch/Ubuntu/Fedora…）：装了 Nix + home-manager standalone
+      # 即可用，部署插件到用户 fcitx5 目录并拉起用户级 server 服务。
+      homeManagerModules.default = import ./modules/home.nix {
+        inherit qingjianFcitx5 qingjianServer;
+        dataPackage = inputs."qingjian-data";
+      };
+
       # 生成完整 Cargo.lock（官方 lock 不含 apps/linux/server 依赖）。
       # 用 nixpkgs cargo（与 Nix 构建的 vendor 解析一致）；官方 main 或
       # nixpkgs 更新后需重新生成：`nix run .#gen-lock -- packages/linux-workspace.lock`
