@@ -2,27 +2,22 @@
   description = "青简输入法 Linux 版：Rust server + fcitx5 插件 + NixOS 模块";
 
   # 与 nixos-config 一致：nixpkgs 走南大镜像，避免 GitHub 直连不稳。
-  # 数据包（qingjian-data / qingjian-model）是上游 qingjian-team Release 资产，
-  # 走 ghfast.top 加速镜像（境内可拉）；tag（当前 data-v1）由官方
-  # tools/release/data.lock 控制，数据更新时由 CI（.github/workflows/update-data.yml）
-  # 自动同步 URL 与 narHash。
+  # 数据包（qingjian-data）是上游 qingjian-team Release 资产（data-v3 起模型并入
+  # tar 的 data/models/hanzhang-*/，不再单独发布 model.qjm）；走 ghfast.top 加速
+  # 镜像（境内可拉）；tag 由官方 tools/release/data.lock 控制，数据更新时由 CI
+  # （.github/workflows/update-data.yml）自动同步 URL 与 narHash。
   inputs = {
     nixpkgs.url = "git+https://mirrors.nju.edu.cn/git/nixpkgs.git?ref=nixpkgs-unstable&shallow=1";
-    # 官方源码（crates 平台逻辑等；官方尚无 apps/linux，linux server/插件在本仓库维护）。
+    # 官方源码（crates 平台逻辑 + apps/linux server/插件；本地仓库只维护 fcitx5 引导插件）。
     # git 方式锁定 rev（官方 main 更新后旧 rev 稳定，不会像 tarball 那样内容变了报 narHash mismatch）；
     # 官方更新时 `nix flake lock --update-input qingjian` 跟进。
     qingjian = {
       url = "git+https://ghfast.top/https://github.com/qingjian-team/qingjian?ref=main&shallow=1";
       flake = false;
     };
-    # 上游数据 tar.gz（扁平 dict/lm/glossary，重排由模块内 runCommand 完成）
+    # 上游数据 tar.gz（data/generated 词库 + data/models 整句模型 + assets，官方约定布局）
     qingjian-data = {
-      url = "https://ghfast.top/https://github.com/qingjian-team/qingjian/releases/download/data-v2/qingjian-data.tar.gz";
-      flake = false;
-    };
-    # 上游整句模型（单文件 model.qjm）
-    qingjian-model = {
-      url = "https://ghfast.top/https://github.com/qingjian-team/qingjian/releases/download/data-v2/model.qjm";
+      url = "https://ghfast.top/https://github.com/qingjian-team/qingjian/releases/download/data-v3/qingjian-data.tar.gz";
       flake = false;
     };
   };
@@ -42,10 +37,10 @@
 
       nixosModules.default = import ./modules/nixos.nix {
         inherit qingjianFcitx5 qingjianServer;
-        # 数据包由本 flake 自带：模块内默认组装 data/generated + data/model，
-        # 启用 services.qingjian.enable 即默认载入，无需 nixos-config 侧提供。
+        # 数据包由本 flake 自带：模块内默认解包 data-v3 官方布局（data/generated +
+        # data/models/hanzhang-* + assets）为资源根，启用 services.qingjian.enable
+        # 即默认载入，无需 nixos-config 侧提供。
         dataPackage = inputs."qingjian-data";
-        modelPackage = inputs."qingjian-model";
       };
 
       # 生成完整 Cargo.lock（官方 lock 不含 apps/linux/server 依赖）。

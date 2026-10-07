@@ -1,26 +1,27 @@
 # 青简 NixOS 模块：
 #   1) 把 fcitx5 插件并进 `i18n.inputMethod.fcitx5.addons`（桌面机共用）；
-#   2) 以用户级 systemd 服务拉起 qingjian-server，并把数据目录以
-#      QINGJIAN_DATA_DIR 注入（数据默认由本 flake 的 qingjian-data / qingjian-model
-#      input 组装，启用即默认载入；需要自定义时用 services.qingjian.dataDir 覆盖）。
+#   2) 以用户级 systemd 服务拉起 qingjian-server，并把数据根以
+#      QINGJIAN_RESOURCES 注入（官方 server 认的环境变量；数据默认由本 flake 的
+#      qingjian-data input 解包出官方 data-v3 布局：data/generated + data/models/
+#      hanzhang-* + assets，启用即默认载入；需要自定义时用 services.qingjian.dataDir 覆盖）。
 # 用法（nixos-config）：
 #   qingjian.url = "github:Aozora-Wings/qingjian-nixos";
 #   （启用处）imports = [ inputs.qingjian.nixosModules.default ];
 #   services.qingjian.enable = true;
-{ qingjianFcitx5, qingjianServer, dataPackage, modelPackage }:
+{ qingjianFcitx5, qingjianServer, dataPackage }:
 { config, lib, pkgs, ... }:
 let
   cfg = config.services.qingjian;
 
-  # 默认数据根：上游 release 数据包（扁平 dict/lm/glossary + model.qjm）重排为
-  # 模块约定结构（data/generated/* + data/model/model.qjm）。assets/ 可选，缺失自动降级。
-  # store 输入只读，复制后放开写权限再清理 macOS AppleDouble 冗余（._ 前缀）。
+  # 默认数据根：上游 release 数据包（官方 data-v3 布局）原样解包即资源根——
+  # data/generated（dict/lm/glossary）+ data/models/hanzhang-*（整句模型）+
+  # assets/（可选，缺失自动降级）。store 输入只读，复制后放开写权限再清理
+  # macOS AppleDouble 冗余（._ 前缀）。
   assembledData = pkgs.runCommand "qingjian-data" { } ''
-    mkdir -p $out/data/generated $out/data/model
-    cp -r ${dataPackage}/. $out/data/generated/
-    chmod -R u+w $out/data/generated
+    mkdir -p $out
+    cp -r ${dataPackage}/. $out/
+    chmod -R u+w $out
     find $out -name '._*' -delete
-    cp ${modelPackage} $out/data/model/model.qjm
   '';
 in
 {
@@ -30,11 +31,11 @@ in
     dataDir = lib.mkOption {
       type = lib.types.path;
       default = assembledData;
-      defaultText = lib.literalExpression "fork 内置数据包组装（qingjian-data + qingjian-model）";
+      defaultText = lib.literalExpression "fork 内置数据包组装（qingjian-data，官方 data-v3 布局）";
       description = ''
-        青简产品数据根目录（含 data/generated、data/model、assets 的子目录）。
-        默认由本 flake 的 qingjian-data / qingjian-model input 组装；需要
-        换用其他数据源时覆盖为自定义目录。
+        青简资源根目录（含 data/generated、data/models/hanzhang-*、assets 的子目录，
+        即官方 server 的 QINGJIAN_RESOURCES 所指）。默认由本 flake 的 qingjian-data
+        input 解包组装；需要换用其他数据源时覆盖为自定义目录。
       '';
     };
 
@@ -65,7 +66,7 @@ in
         ExecStart = "${qingjianServer}/bin/qingjian-server";
         Restart = "on-failure";
         RestartSec = "2";
-        Environment = "QINGJIAN_DATA_DIR=${cfg.dataDir}";
+        Environment = "QINGJIAN_RESOURCES=${cfg.dataDir}";
       };
     };
   };
