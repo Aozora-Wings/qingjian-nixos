@@ -39,7 +39,7 @@ jobs:
           # 下载两个资产并与 data.lock 中的 sha256 比对
           # 只校验 data.lock 中列出的资产（data-v3 起官方不再单独发布 model.qjm，
           # 模型并入 qingjian-data.tar.gz 的 data/models/hanzhang-*/）
-          awk -F' = ' '$1 != "tag" { print $1 }' /tmp/data.lock | while read -r f; do
+          awk -F' = ' 'NF == 2 && $1 != "tag" { print $1 }' /tmp/data.lock | while read -r f; do
             h=$(awk -v f="$f" -F' = ' '$1==f{print $2}' /tmp/data.lock)
             curl -fsSL "https://github.com/qingjian-team/qingjian/releases/download/${TAG}/${f}" -o "/tmp/$f"
             echo "$h  /tmp/$f" | sha256sum -c -
