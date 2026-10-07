@@ -27,8 +27,9 @@ let
   # assets/（可选，缺失自动降级）。store 输入只读，复制后放开写权限再清理
   # macOS AppleDouble 冗余（._ 前缀）。
   assembledData = pkgs.runCommand "qingjian-data" { } ''
-    mkdir -p $out
-    cp -r ${dataPackage}/. $out/
+    # 同上：nix flake=false input 剥离 tar 单层顶层目录，补回 data/ 层作为资源根。
+    mkdir -p $out/data
+    cp -r ${dataPackage}/. $out/data/
     chmod -R u+w $out
     find $out -name '._*' -delete
   '';
