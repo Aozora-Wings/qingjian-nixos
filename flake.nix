@@ -27,7 +27,7 @@
       system = "x86_64-linux";
       pkgs = import nixpkgs { inherit system; };
       qingjianServer = pkgs.callPackage ./packages/server.nix { qingjianSrc = inputs.qingjian; };
-      qingjianFcitx5 = pkgs.callPackage ./packages/fcitx5.nix { };
+      qingjianFcitx5 = pkgs.callPackage ./packages/fcitx5.nix { qingjianSrc = inputs.qingjian; };
     in {
       packages.${system} = {
         inherit qingjianServer qingjianFcitx5;
