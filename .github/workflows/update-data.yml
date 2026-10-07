@@ -1,4 +1,4 @@
-# 自动同步上游数据包（qingjian-data / qingjian-model）。
+# 自动同步上游数据包（qingjian-data；data-v3 起模型并入 tar）。
 # 上游 qingjian-team 在 tools/release/data.lock 维护 tag + sha256，
 # 本 workflow 每两天检查一次：拉 data.lock → 校验资产 sha256 →
 # 更新 flake.nix 的 release URL → nix flake lock 重锁 narHash →
@@ -37,7 +37,9 @@ jobs:
           TAG=$(awk -F' = ' '/^tag = /{print $2}' /tmp/data.lock)
           echo "官方数据 tag: $TAG"
           # 下载两个资产并与 data.lock 中的 sha256 比对
-          for f in qingjian-data.tar.gz model.qjm; do
+          # 只校验 data.lock 中列出的资产（data-v3 起官方不再单独发布 model.qjm，
+          # 模型并入 qingjian-data.tar.gz 的 data/models/hanzhang-*/）
+          awk -F' = ' '$1 != "tag" { print $1 }' /tmp/data.lock | while read -r f; do
             h=$(awk -v f="$f" -F' = ' '$1==f{print $2}' /tmp/data.lock)
             curl -fsSL "https://github.com/qingjian-team/qingjian/releases/download/${TAG}/${f}" -o "/tmp/$f"
             echo "$h  /tmp/$f" | sha256sum -c -
@@ -50,7 +52,7 @@ jobs:
           # 把 input url 里的旧 tag（data/ 或 data-vN/）换成官方当前 tag
           sed -i "s|releases/download/data[^/]*/|releases/download/${TAG}/|g" flake.nix
           grep -n 'releases/download' flake.nix
-          nix flake lock --update-input qingjian-data --update-input qingjian-model
+          nix flake lock --update-input qingjian-data
           git diff --stat
 
       - name: 有变化则提交推送
