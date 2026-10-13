@@ -55,7 +55,8 @@ jobs:
           else
             # cargoHash 过期（官方 crates 更新 → vendor 内容变）时自动修复重试
             GOT=$(grep -oP 'got:\s+sha256-\S+' /tmp/build.log | head -1 | awk '{print $2}' || true)
-            if [ -n "$GOT" ] && grep -q 'cargoHash or cargoSha256 is out of date' /tmp/build.log; then
+            # 旧 nix：cargoHash or cargoSha256 is out of date；新 nix（>=2.19）：hash mismatch in fixed-output derivation
+            if [ -n "$GOT" ] && grep -qE 'cargoHash or cargoSha256 is out of date|hash mismatch in fixed-output derivation' /tmp/build.log; then
               echo "cargoHash 过期，更新为 $GOT"
               sed -i "s|cargoHash = \"[^\"]*\"|cargoHash = \"$GOT\"|" packages/server.nix
               build || { echo "::error::hash 修复后仍构建失败"; exit 1; }
