@@ -17,7 +17,7 @@
     };
     # 上游数据 tar.gz（data/generated 词库 + data/models 整句模型 + assets，官方约定布局）
     qingjian-data = {
-      url = "https://ghfast.top/https://github.com/qingjian-team/qingjian/releases/download/data-v5/qingjian-data.tar.gz";
+      url = "https://ghfast.top/https://github.com/qingjian-team/qingjian/releases/download/data-v7/qingjian-data.tar.gz";
       flake = false;
     };
   };
