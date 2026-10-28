@@ -45,7 +45,7 @@ rustPlatform' {
     cargoTestFlags = "-p qingjian-linux-server";
   };
 
-  cargoHash = "sha256-GSxKE6qmMxE1uAXgrDbgRqT1AE/Eha6YIht8V+5kT78=";
+  cargoHash = "sha256-yPcHPV3kA6mOM8KLd4vUXbeMCrAIzxGLpokZKqpGE78=";
 
   # 依赖下载已在 fetchCargoVendor（镜像版）阶段完成，构建期 cargo 由
   # cargoSetupHook 自动配置使用 vendored 依赖，无需再写 registry 配置。
