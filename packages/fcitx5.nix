@@ -24,6 +24,14 @@ stdenv.mkDerivation {
       !(type == "directory" && baseNameOf path == "build");
   };
 
+  # 上游 apps/linux/fcitx5/src/qingjian.cpp 里是 #include "../../surrounding.h"，
+  # 该头文件在 fcitx5 子树之外（apps/linux/surrounding.h），由 fcitx4/fcitx5/tests 共用。
+  # 只拷 fcitx5 子树时相对路径会落到源码树外，导致编译报 No such file or directory；
+  # 这里把共用的头文件补到构建目录（src/../../surrounding.h 解析到的位置）。
+  postPatch = ''
+    cp ${qingjianSrc}/apps/linux/surrounding.h "$NIX_BUILD_TOP/surrounding.h"
+  '';
+
   nativeBuildInputs = [ cmake pkg-config ];
   buildInputs = [ fcitx5 nlohmann_json ];
 
