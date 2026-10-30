@@ -20,10 +20,10 @@
     "qingjian": {
       "flake": false,
       "locked": {
-        "lastModified": 1793261096,
-        "narHash": "sha256-qQ7M3+mXwDQRsmAcCw3znUaHk0bAs3V3DqGUqriFgV8=",
+        "lastModified": 1793344273,
+        "narHash": "sha256-dyCTfPQkNMWvQUfuxT2O/m8o51QiPxKtDNhsT9vcQSQ=",
         "ref": "main",
-        "rev": "a6916d8089111baa3da3d44ca4809a3bf20258dc",
+        "rev": "3d5fd2df431cea92eba39d08cd94a8a4093bb872",
         "shallow": true,
         "type": "git",
         "url": "https://ghfast.top/https://github.com/qingjian-team/qingjian"
