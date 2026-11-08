@@ -38,14 +38,14 @@
     "qingjian-data": {
       "flake": false,
       "locked": {
-        "lastModified": 1793325964,
-        "narHash": "sha256-AUR31UzjOStls8gfCiqQylhzsxVpBYLxGDk38TVQOuo=",
+        "lastModified": 1794048791,
+        "narHash": "sha256-/YnqvuDBf/VIAWeznX4uWGpJZq73YFFW0GG745BBioU=",
         "type": "tarball",
-        "url": "https://ghfast.top/https://github.com/qingjian-team/qingjian/releases/download/data-v9/qingjian-data.tar.gz"
+        "url": "https://ghfast.top/https://github.com/qingjian-team/qingjian/releases/download/data-v10/qingjian-data.tar.gz"
       },
       "original": {
         "type": "tarball",
-        "url": "https://ghfast.top/https://github.com/qingjian-team/qingjian/releases/download/data-v9/qingjian-data.tar.gz"
+        "url": "https://ghfast.top/https://github.com/qingjian-team/qingjian/releases/download/data-v10/qingjian-data.tar.gz"
       }
     },
     "root": {
