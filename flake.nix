@@ -8,6 +8,19 @@
   # （.github/workflows/update-data.yml）自动同步 URL 与 narHash。
   inputs = {
     nixpkgs.url = "git+https://mirrors.nju.edu.cn/git/nixpkgs.git?ref=nixpkgs-unstable&shallow=1";
+
+    # Rust 工具链来源：上游 rust-toolchain.toml 固定 channel = "1.96.0"，构建必须
+    # 与之对齐。nixpkgs 自带的 rustc 1.97.x 在 core_arch 里把
+    # llvm.x86.avx512.vpdpbusd.256 声明成 (v8i32, v32i8, v32i8)，与 LLVM 21 期望的
+    # (v8i32, v8i32, v8i32) 不符，candle-core 0.11.1 的 quantized/repack_x86.rs
+    # （AVX512-VNNI 内核，x86_64 下无条件编译）会直接报
+    # "intrinsic signature mismatch"，整个 server 构建失败。
+    # 官方更新 rust-toolchain.toml 时，这里的版本要同步改。
+    rust-overlay = {
+      url = "github:oxalica/rust-overlay";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+
     # 官方源码（crates 平台逻辑 + apps/linux server/插件；fork 只做 Nix 分发层）。
     # git 方式锁定 rev（官方 main 更新后旧 rev 稳定，不会像 tarball 那样内容变了报 narHash mismatch）；
     # 官方更新时 `nix flake lock --update-input qingjian` 跟进。
@@ -22,11 +35,25 @@
     };
   };
 
-  outputs = { self, nixpkgs, ... }@inputs:
+  outputs = { self, nixpkgs, rust-overlay, ... }@inputs:
     let
       system = "x86_64-linux";
-      pkgs = import nixpkgs { inherit system; };
-      qingjianServer = pkgs.callPackage ./packages/server.nix { qingjianSrc = inputs.qingjian; };
+      pkgs = import nixpkgs {
+        inherit system;
+        overlays = [ (import rust-overlay) ];
+      };
+
+      # 与上游 rust-toolchain.toml 的 channel = "1.96.0" 一致；改上游版本时改这里。
+      rustToolchain = pkgs.rust-bin.stable."1.96.0".default;
+      rustPlatform = pkgs.makeRustPlatform {
+        cargo = rustToolchain;
+        rustc = rustToolchain;
+      };
+
+      qingjianServer = pkgs.callPackage ./packages/server.nix {
+        inherit rustPlatform;
+        qingjianSrc = inputs.qingjian;
+      };
       qingjianFcitx5 = pkgs.callPackage ./packages/fcitx5.nix { qingjianSrc = inputs.qingjian; };
     in {
       packages.${system} = {
@@ -53,7 +80,8 @@
       devShells.${system}.default = pkgs.mkShell {
         name = "qingjian-linux-dev";
 
-        # Rust server：rustup 管 toolchain（rust-toolchain.toml 指定 1.96.0）。
+        # Rust server：rustup 管 toolchain（rust-toolchain.toml 指定 1.96.0），
+        # 版本要与上面的 rustToolchain 保持一致（构建用的是固定 1.96.0）。
         # fcitx5 插件：gcc/cmake/pkg-config + fcitx5 开发头与 CMake 模块。
         packages = with pkgs; [
           rustup

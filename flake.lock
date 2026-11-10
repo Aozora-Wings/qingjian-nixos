@@ -20,10 +20,10 @@
     "qingjian": {
       "flake": false,
       "locked": {
-        "lastModified": 1794210550,
-        "narHash": "sha256-FiMgbOv10gw/uDcGa8JI2kDBNRNi9jVK0n6IhNWT5c0=",
+        "lastModified": 1794300031,
+        "narHash": "sha256-GeS8JhswQRmivIERVYfh4WtDCKKOKBepcEz7ZCHULSI=",
         "ref": "main",
-        "rev": "9fec98bdc20ed144fe7a4852c20ac6b1bd9d1dd2",
+        "rev": "729ecba368ba28f195385bfc1ad996aacd2486dc",
         "shallow": true,
         "type": "git",
         "url": "https://ghfast.top/https://github.com/qingjian-team/qingjian"
@@ -52,7 +52,28 @@
       "inputs": {
         "nixpkgs": "nixpkgs",
         "qingjian": "qingjian",
-        "qingjian-data": "qingjian-data"
+        "qingjian-data": "qingjian-data",
+        "rust-overlay": "rust-overlay"
+      }
+    },
+    "rust-overlay": {
+      "inputs": {
+        "nixpkgs": [
+          "nixpkgs"
+        ]
+      },
+      "locked": {
+        "lastModified": 1794303164,
+        "narHash": "sha256-UZMtOt43/HRVssXPSuPv8t11Toq9+CjyWUfYQ3tqGVE=",
+        "owner": "oxalica",
+        "repo": "rust-overlay",
+        "rev": "89750a2ef1c6a44db9f4251b16c23deffdcfddff",
+        "type": "github"
+      },
+      "original": {
+        "owner": "oxalica",
+        "repo": "rust-overlay",
+        "type": "github"
       }
     }
   },
